@@ -1,0 +1,111 @@
+---
+interface Props {
+  beforeImage: string;
+  afterImage: string;
+  beforeLabel?: string;
+  afterLabel?: string;
+}
+
+const { 
+  beforeImage, 
+  afterImage, 
+  beforeLabel = "Prima", 
+  afterLabel = "Dopo" 
+} = Astro.props;
+---
+
+<div class="before-after-container relative w-full aspect-video rounded-2xl overflow-hidden cursor-ew-resize select-none group border border-border">
+  <!-- Immagine Dopo (Sotto) -->
+  <img 
+    src={afterImage} 
+    alt="Dopo il trattamento" 
+    class="absolute inset-0 w-full h-full object-cover"
+  />
+  
+  <!-- Immagine Prima (Sopra, tagliata) -->
+  <div class="before-overlay absolute inset-0 w-full h-full overflow-hidden" style="width: 50%;">
+    <img 
+      src={beforeImage} 
+      alt="Prima del trattamento" 
+      class="absolute inset-0 w-full h-full object-cover max-w-none"
+    />
+  </div>
+
+  <!-- Barra di scorrimento -->
+  <div class="handle absolute inset-y-0 left-1/2 w-1 bg-white shadow-[0_0_10px_rgba(0,0,0,0.5)] z-10 flex items-center justify-center pointer-events-none">
+    <div class="w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-800"><path d="m9 18 6-6-6-6"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-800 rotate-180 -ml-4"><path d="m9 18 6-6-6-6"/></svg>
+    </div>
+  </div>
+
+  <!-- Label -->
+  <div class="absolute bottom-4 left-4 bg-black/50 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+    {beforeLabel}
+  </div>
+  <div class="absolute bottom-4 right-4 bg-black/50 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+    {afterLabel}
+  </div>
+</div>
+
+<script>
+  function initBeforeAfter() {
+    const containers = document.querySelectorAll('.before-after-container');
+    
+    containers.forEach(container => {
+      const overlay = container.querySelector('.before-overlay') as HTMLElement;
+      const handle = container.querySelector('.handle') as HTMLElement;
+      let isResizing = false;
+
+      const move = (e: MouseEvent | TouchEvent) => {
+        if (!isResizing) return;
+        
+        const rect = container.getBoundingClientRect();
+        let x = 0;
+        
+        if (e instanceof MouseEvent) {
+          x = e.clientX - rect.left;
+        } else if (e instanceof TouchEvent) {
+          x = e.touches[0].clientX - rect.left;
+        }
+
+        let position = (x / rect.width) * 100;
+        
+        if (position < 0) position = 0;
+        if (position > 100) position = 100;
+
+        overlay.style.width = `${position}%`;
+        handle.style.left = `${position}%`;
+      };
+
+      const startResizing = () => { isResizing = true; container.classList.add('is-resizing'); };
+      const stopResizing = () => { isResizing = false; container.classList.remove('is-resizing'); };
+
+      container.addEventListener('mousedown', startResizing);
+      window.addEventListener('mouseup', stopResizing);
+      window.addEventListener('mousemove', move);
+
+      container.addEventListener('touchstart', startResizing);
+      window.addEventListener('touchend', stopResizing);
+      window.addEventListener('touchmove', move);
+    });
+  }
+
+  // Esegui all'avvio e dopo le transizioni di pagina di Astro
+  initBeforeAfter();
+  document.addEventListener('astro:after-swap', initBeforeAfter);
+</script>
+
+<style>
+  .before-after-container.is-resizing {
+    cursor: ew-resize;
+  }
+  .before-overlay img {
+    width: 100%;
+    height: 100%;
+  }
+  /* Assicura che l'immagine sotto non venga ridimensionata male */
+  .before-after-container img {
+    pointer-events: none;
+  }
+</style>
